@@ -1,0 +1,9 @@
+ultralytics>=8.0.0   # implementazione di YOLOv8 da Ultralytics
+opencv-python>=4.8.0    #questa libreria serve per importare immagini a video (tipo la webcam del computer)
+numpy>=1.21.0
+fer>=22.5.1             #una libreria che contiene le reti neurali convoluzionali addestrate per il riconoscimento delle emozioni
+tensorflow>=2.13.0
+matplotlib>=3.5.0
+
+#una volta ultimato il file, vado nel terminale e installo tutte le versioni del file scrivendo:
+#pip install -r 'percorso del file .txt'
