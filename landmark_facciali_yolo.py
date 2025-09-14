@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict, Optional      #questo mi serve perchè ave
 class Landmarks_detector():
     def __init__(self,
                 # static_image_mode: bool=False,                        '''Non c’è distinzione tra immagine statica e video → YOLO lavora frame-per-frame'''
-                max_num_faces: int=1,                                   #questo rappresenta il numero massimo di volti da rilevare, che posso tracciare all'interno del video
+                max_num_faces: int=5,                                   #questo rappresenta il numero massimo di volti da rilevare, che posso tracciare all'interno del video
                 # refine_landmarks: bool=True,                          #questo mi permetterà di andare a rifinire meglio la precisione attorno al contorno occhi e labbra
                 # min_detection_confidence: float=0.5,                    #queste due righe sono le due soglie di confidenza per rilevare un nuovo volto oppure a continuare a tracciare un volto già rilevato
                 # min_tracking_confidence: float=0.5,                   '''Non esiste “tracking confidence”: YOLO non tiene memoria tra i frame, ogni predizione è indipendente'''
@@ -38,17 +38,17 @@ class Landmarks_detector():
         self.mouth_indices = ['mouth_left', 'mouth_right']
     
     #creo la funzione per rilevare i landmarks delle immagini
-    def detect_lms(self,image:np.ndarray)->Optional[List]:  #con la freccia vado a precisare che ... (riguardare registrazione)
+    def detect_lms(self,image:np.ndarray)->Optional[List]:
         #carico l'immagine
         # img_rgb = cv2.cvtColor(image,cv2.COLOR_BGR2RGB) '''questa conversione in yolo non serve perchè lavora anche in BGR'''
         #processo l'immagine
         results = self.yo_model(image,conf=self.yo_conf,max_det=self.yo_max_num_faces,verbose=False)
         if not results or len(results) == 0:
             return None
-        r0 = results[0]
-        if r0.boxes is None or len(r0.boxes) == 0:
-            return None
-        return [r0]
+        r0 = results
+        # if r0.boxes is None or len(r0.boxes) == 0:
+        #     return None
+        return r0
 
     #funzione eper estrarre gli elementi facciali
     def extract_keypoints_dict(self,r0)->Dict:   #preciso che mi deve ritornare un 'dict' //// (...,img_shape:Tuple[int,int])
@@ -60,21 +60,26 @@ class Landmarks_detector():
             'mouth': []  #qui gli unirò la parte destra e sinistra della bocca
         }
 
+        # Estrai i keypoints ( Occhio Matti! spesso con YOLO mi sono trovato strutture diverse in base alla versione. questa è la struttura che la tua fornisce )
         kps = getattr(r0,'keypoints', None)
+
+        # Se non ci sono keypoints, ritorna un dizionario vuoto
         if kps is None or kps.xy is None:
             return facial_elements
         
-        # xy: [num_faces, K, 2]
-        xy = kps.xy  # tensor o ndarray
+        # xy: [num_faces, K, 2] dove; num_faces è il n di volti rilevati, K  è il n di punti per volto (in questo caso 5), 2 sta per le coordinate x e y
+        xy = kps.xy  #i keypoints facciali possono essere tensor o ndarray
+
+        # Se necessario ( è il caso se lavori con pc, altrimenti se lavori su kaggle non ne hai bisogno ) trasferisci i dati dalla GPU alla CPU e convertili in numpy
         if hasattr(xy, "cpu"):
             xy = xy.cpu().numpy()
 
         # Prendiamo SOLO il primo volto per coerenza con la tua logica
-        face_kps = xy[0]  # shape [K,2]
+        face_kps = xy[0]  # shape [K,2] -> k punti per volto
 
         # Mappa 5-punti -> elementi
         def get_point(name):
-            idx = self.kp_map.get(name, None)
+            idx = self.kp_map.get(name, None) #mappa tra nome e indice
             if idx is None or idx >= face_kps.shape[0]:
                 return None
             x_f, y_f = face_kps[idx]
@@ -84,7 +89,7 @@ class Landmarks_detector():
             # if 0.0 <= x_f <= 1.0 and 0.0 <= y_f <= 1.0:
             #     x_f *= width
             #     y_f *= height
-            return (int(x_f), int(y_f))
+            return (int(x_f), int(y_f)) #qua ritorna le coordinate (x,y) in pixel
 
         le = get_point('left_eye')
         re = get_point('right_eye')
@@ -190,7 +195,7 @@ def test_facial_lms():
         if not ret:
             print('Error: can\'t read the frame')
             break
-        annotated_frame, facial_elements, centers = detector.process_frame(frame)
+        annotated_frame, facial_elements = detector.process_frame(frame)
         info = f'Delected elements: {len([k for k,v in facial_elements.items() if v])}'
         cv2.putText(annotated_frame,info,(10,30),cv2.FONT_HERSHEY_SIMPLEX,0.7,(0,255,0),2)
         cv2.imshow('Facial landmarks detection',annotated_frame)
