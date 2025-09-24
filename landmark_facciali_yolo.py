@@ -10,7 +10,7 @@ class Landmarks_detector():
                 # refine_landmarks: bool=True,                          #questo mi permetterà di andare a rifinire meglio la precisione attorno al contorno occhi e labbra
                 # min_detection_confidence: float=0.5,                    #queste due righe sono le due soglie di confidenza per rilevare un nuovo volto oppure a continuare a tracciare un volto già rilevato
                 # min_tracking_confidence: float=0.5,                   '''Non esiste “tracking confidence”: YOLO non tiene memoria tra i frame, ogni predizione è indipendente'''
-                model_path: str=r"C:\Users\matti\Desktop\corsi_di_formazione\2025_02_BitCamp_python_AI\esercizi\esercizi_reti_neurali\riconoscimento_facciale\riconoscimento_facciale_yolo\face_yolov8s.pt",                       #è il file di pytorch con i pesi del modello YOLO che gli carico
+                model_path: str="face_yolov8s.pt",                       #è il file di pytorch con i pesi del modello YOLO che gli carico
                 conf: float=0.5,                                        #rappresenta la soglia di confidenza, se la predizione è più bassa di 0.5 scarta l'immagine perchè non la considera come un volto (serve per dare più robustezza nel caso in cui ci siano immagini dove NON c'è un singolo volto)
                 device: Optional[str] = None):                          #rappresente il tipo di device che si riesce a utilizzare, cambia lui in automatico se CPU o GPU (se uso GPU, scrivere: "cuda:0")
         
@@ -50,7 +50,7 @@ class Landmarks_detector():
         #     return None
         return r0
 
-    #funzione eper estrarre gli elementi facciali
+    #funzione per estrarre gli elementi facciali
     def extract_keypoints_dict(self,r0)->Dict:   #preciso che mi deve ritornare un 'dict' //// (...,img_shape:Tuple[int,int])
         # height, width = img_shape[:2]
         facial_elements = {
@@ -106,7 +106,7 @@ class Landmarks_detector():
 
         return facial_elements
 
-    def extract_facial_elements(self, landmarks, img_shape: Tuple[int, int]) -> Dict:
+    def extract_facial_elements(self, landmarks, img_shape:Tuple[int, int]) -> Dict:
         """
         PRIMA: leggevamo 468 punti dal FaceMesh e selezionavamo per indice.
         ORA: 'landmarks' è in realtà il results[0] di YOLO.
@@ -195,8 +195,8 @@ def test_facial_lms():
         if not ret:
             print('Error: can\'t read the frame')
             break
-        annotated_frame, facial_elements = detector.process_frame(frame)
-        info = f'Delected elements: {len([k for k,v in facial_elements.items() if v])}'
+        annotated_frame, facial_elements, _ = detector.process_frame(frame)
+        info = f'Selected elements: {len([k for k,v in facial_elements.items() if v])}'
         cv2.putText(annotated_frame,info,(10,30),cv2.FONT_HERSHEY_SIMPLEX,0.7,(0,255,0),2)
         cv2.imshow('Facial landmarks detection',annotated_frame)
         if cv2.waitKey(1) & 0xFF == ord('q'): #questo è il comando per uscire
